@@ -83,7 +83,10 @@ class Elmo(torch.nn.Module):
                         "Don't provide options_file or weight_file with module")
             self._elmo_lstm = module
         else:
-            self._elmo_lstm = _ElmoBiLm(options_file, weight_file, requires_grad=requires_grad)
+            self._elmo_lstm = _ElmoBiLm(
+                options_file,
+                weight_file,
+                requires_grad=requires_grad)
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
@@ -114,12 +117,15 @@ class Elmo(torch.nn.Module):
             Shape ``(batch_size, timesteps)`` long tensor with sequence mask.
         """
         # reshape the input if needed
+        '''
         original_shape = inputs.size()
         timesteps, num_characters = original_shape[-2:]
         if len(original_shape) > 3:
             reshaped_inputs = inputs.view(-1, timesteps, num_characters)
         else:
             reshaped_inputs = inputs
+        '''
+        reshaped_inputs = inputs
 
         # run the biLM
         bilm_output = self._elmo_lstm(reshaped_inputs)
@@ -137,6 +143,7 @@ class Elmo(torch.nn.Module):
             representations.append(self._dropout(representation_without_bos_eos))
 
         # reshape if necessary
+        '''
         if len(original_shape) > 3:
             mask = mask_without_bos_eos.view(original_shape[:-1])
             elmo_representations = [representation.view(original_shape[:-1] + (-1, ))
@@ -144,6 +151,9 @@ class Elmo(torch.nn.Module):
         else:
             mask = mask_without_bos_eos
             elmo_representations = representations
+        '''
+        mask = mask_without_bos_eos
+        elmo_representations = representations
 
         return {'elmo_representations': elmo_representations, 'mask': mask}
 
@@ -451,7 +461,7 @@ class _ElmoBiLm(torch.nn.Module):
                  requires_grad: bool = False) -> None:
         super(_ElmoBiLm, self).__init__()
 
-        self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
+        # self._token_embedder = _ElmoCharacterEncoder(options_file, weight_file, requires_grad=requires_grad)
 
         with open(cached_path(options_file), 'r') as fin:
             options = json.load(fin)
@@ -492,7 +502,9 @@ class _ElmoBiLm(torch.nn.Module):
         Note that the output tensors all include additional special begin and end of sequence
         markers.
         """
-        token_embedding = self._token_embedder(inputs)
+        # token_embedding = self._token_embedder(inputs)
+        token_embedding = inputs
+
         type_representation = token_embedding['token_embedding']
         mask = token_embedding['mask']
         lstm_outputs = self._elmo_lstm(type_representation, mask)
